@@ -28,10 +28,10 @@ Return in the following JSON format
 `
 
 export async function POST(request) {
-    const openai = OpenAI();
+    const openai = new OpenAI();
     const data = await request.text()
 
-    const completion = await openai.chat.completion.create({
+    const completion = await openai.chat.completions.create({
         messages: [{role: 'system', content: systemPrompt}, 
             {role: "user", content: data},
         ],
@@ -39,7 +39,9 @@ export async function POST(request) {
         response_format: {type: 'json_object'}
     })       
 
+    console.log(completion.choices[0].message.content)
+
     const flashcards = JSON.parse(completion.choices[0].message.content)
 
-    return NextResponse.json(flashcards.flashcard)
+    return NextResponse.json(flashcards.flashcards)
 }

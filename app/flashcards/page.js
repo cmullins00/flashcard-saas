@@ -1,5 +1,15 @@
+'use client'
+import { useUser } from '@clerk/nextjs'
+import {useUser} from '@clerk/nextjs'
+import { useEffect, useState } from 'react'
+
+import { collection, doc, getDoc, setDoc} from 'firebase/firestore'
+import { db } from '@firebase.js'
+import { useRouter } from 'next/navigation'
+
+
 export default function Flashcard() {
-    const { isLoaded, isSignedIn, user } = useUser()
+    const {isLoaded, isSignedIn, user} = useUser()
     const [flashcards, setFlashcards] = useState([])
     const router = useRouter()
   
@@ -9,9 +19,11 @@ export default function Flashcard() {
     
     useEffect(() => {
         async function getFlashcards() {
-            if (!user) return
+            if (!user) return // Check if user is logged in
+
             const docRef = doc(collection(db, 'users'), user.id)
             const docSnap = await getDoc(docRef)
+
             if (docSnap.exists()) {
                 const collections = docSnap.data().flashcards || []
                 setFlashcards(collections)
@@ -19,8 +31,13 @@ export default function Flashcard() {
                 await setDoc(docRef, { flashcards: [] })
             }
         }
+
         getFlashcards()
     }, [user])
+
+    if (!isLoaded || !isSignedIn) { // Do not generate flashcards if user is not logged in
+        return <></>
+    }
 
     return (
         <Container maxWidth="md">

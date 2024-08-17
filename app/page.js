@@ -1,3 +1,4 @@
+'use client'
 import Image from "next/image";
 import getStripe from '@/utils/get-stripe'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
@@ -6,14 +7,19 @@ import Head from 'next/head'
 
 export default function Home() {
   
-
   // Stripe integration
   const handleSubmit = async () => {
     const checkoutSession = await fetch('/api/checkout_sessions', {
       method: 'POST',
-      headers: { origin: 'http://localhost:3000' },
+      headers: { origin: 'http://localhost:3000' }, // Will need to change this once it is deployed
     })
+
     const checkoutSessionJson = await checkoutSession.json()
+
+    if (checkoutSession.statusCode === 500) {
+      console.error('Error:', checkoutSession.message)
+      return
+    }
 
     const stripe = await getStripe()
     const { error } = await stripe.redirectToCheckout({
@@ -102,7 +108,7 @@ export default function Home() {
                   {' '}
                   Access to basic flashcard features and limited storage.
                 </Typography>
-                <Button variant="contained" sx={{ mt: 2 }}>Select Option</Button>
+                <Button variant="contained" sx={{ mt: 2 }} onClick={handleSubmit}>Select Option</Button>
               </Box>
             </Grid>
 
@@ -121,7 +127,7 @@ export default function Home() {
                   {' '}
                   Access to basic flashcard features and limited storage.
                 </Typography>
-                <Button variant="contained" sx={{ mt: 2 }}>Select Option</Button>
+                <Button variant="contained" sx={{ mt: 2 }} onClick={handleSubmit}>Select Option</Button>
               </Box>
             </Grid>
           </Grid>

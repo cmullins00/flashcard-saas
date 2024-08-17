@@ -10,12 +10,10 @@ const formatAmountForStripe = (amount, currency) => {
     return Math.round(amount * 100)
    }
 
+
 /**
  * This function handles the POST request to create a checkout session on the server.
  * It uses the Stripe API to create a session and returns the session object as a JSON response.
- *
- * @param {Object} req - The request object containing the request data.
- * @returns {Promise<Object>} - A promise that resolves to a NextResponse object with the session object or an error object.
  */
 export async function POST(req) {
   try {
