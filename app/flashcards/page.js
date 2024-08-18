@@ -1,22 +1,20 @@
 'use client'
 import { useUser } from '@clerk/nextjs'
-import {useUser} from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
-
+import { Container, Typography, CardActionArea, Grid, Card, CardContent } from '@mui/material'
 import { collection, doc, getDoc, setDoc} from 'firebase/firestore'
-import { db } from '@firebase.js'
+import { db } from '../../firebase.js'
 import { useRouter } from 'next/navigation'
-
 
 export default function Flashcard() {
     const {isLoaded, isSignedIn, user} = useUser()
     const [flashcards, setFlashcards] = useState([])
     const router = useRouter()
-  
+
     const handleCardClick = (id) => {
         router.push(`/flashcard?id=${id}`)
     }
-    
+
     useEffect(() => {
         async function getFlashcards() {
             if (!user) return // Check if user is logged in

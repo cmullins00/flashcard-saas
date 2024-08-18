@@ -2,9 +2,9 @@
 import { useUser } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore'
-import { db } from '@firebase.js'
+import { db } from '../../firebase.js'
 import { useSearchParams } from 'next/navigation'
-import { Container, TextField, Button, Typography, Box, CardActionArea } from '@mui/material'
+import { Container, TextField, Button, Typography, Box, CardActionArea, Grid, Card, CardContent } from '@mui/material'
 
 export default function Flashcard() {
     const {isLoaded, isSignedIn, user} = useUser()

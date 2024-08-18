@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Container, TextField, Button, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, CardActionArea } from '@mui/material'
+import { Container, TextField, Button, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, CardActionArea, Grid, Card, CardContent } from '@mui/material'
 import { useUser } from '@clerk/nextjs'
-import { db } from '@firebase.js'
+import { db } from '../../firebase.js'
 import { collection, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore'
 
 export default function Generate() {
@@ -15,6 +15,17 @@ export default function Generate() {
     const [text, setText] = useState('')                // Text entered by the user
     const [open, setOpen] = useState(false)             // Used to open and close the dialog modals
     const router = useRouter()                          // Used to navigate to other pages
+
+    const systemPrompt = `You are a flashcard creator, you take in text and create multiple flashcards from it. Make sure to create exactly 10 flashcards. Both front and back should be one sentence long. You should return in the following JSON format: { "flashcards":[ { "front": "Front of the card", "back": "Back of the card" } ] }`
+
+    const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+    const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
+
+    const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        systemInstruction: systemPrompt
+    });
 
     // Submit handler for generating flashcards
     const handleSubmit = async () => {
@@ -65,12 +76,12 @@ export default function Generate() {
           alert('Please enter a name for your flashcard set.')
           return
         }
-      
+
         try {
             const batch = writeBatch(db)
             const userDocRef = doc(collection(db, 'users'), user.id)
             const userDocSnap = await getDoc(userDocRef)
-      
+
             if (userDocSnap.exists()) { // If the user document does not exist, it creates one
                 const collections = docSnap.data().flashcardSets || []
 
@@ -88,13 +99,13 @@ export default function Generate() {
             } else {
                 batch.set(userDocRef, { flashcardSets: [{ name }] })
             }
-      
+
             const colRef = collection(userDocRef, name)
             flashcards.forEach((flashcard) => {
                 const cardDocRef = doc(colRef)
                 batch.set(cardDocRef, flashcard)
             })
-      
+
             await batch.commit()
             alert('Flashcards saved successfully!')   // After saving, it alerts the user and closes the dialog
 
@@ -143,8 +154,8 @@ export default function Generate() {
                             {flashcards.map((flashcard, index) => (
                                 <Grid item xs={12} sm={6} md={4} key={index}>
                                     <Card>
-                                        <CardActionArea 
-                                            onClick={() => { 
+                                        <CardActionArea
+                                            onClick={() => {
                                                 handleCardClick(index)
                                             }}
                                         >
@@ -185,7 +196,7 @@ export default function Generate() {
                                                             </Typography>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <Typography variant="h5" sx={{ mt: 2 }}>Back:</Typography>
                                                     <Typography>{flashcard.back}</Typography>
                                                 </Box>
@@ -204,8 +215,6 @@ export default function Generate() {
                         )}
                     </Box>
                 )}
-
-                
 
                 <Dialog open={open} onClose={handleClose}>
                     <DialogTitle>Save Flashcard Set</DialogTitle>

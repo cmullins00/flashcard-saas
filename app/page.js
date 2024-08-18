@@ -6,7 +6,7 @@ import { AppBar, Toolbar, Button, Typography, Box, Grid, Container } from '@mui/
 import Head from 'next/head'
 
 export default function Home() {
-  
+
   // Stripe integration
   const handleSubmit = async () => {
     const checkoutSession = await fetch('/api/checkout_sessions', {
@@ -73,7 +73,7 @@ export default function Home() {
             {/* Feature items */}
             <Grid item xs={12} sm={6} md={4}>
               <Typography variant="h6">Easy Text Input</Typography>
-              <Typography>Simply type your text and we'll generate flashcards.</Typography>
+              <Typography>{`Simply type your text and we'll generate flashcards.`}</Typography>
             </Grid>
 
             <Grid item xs={12} sm={6} md={4}>
@@ -135,5 +135,5 @@ export default function Home() {
       </AppBar>
     </Container>
   )
-  
+
 }
