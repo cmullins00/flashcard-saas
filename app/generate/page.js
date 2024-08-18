@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Container, TextField, Button, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, CardActionArea, Grid, Card, CardContent } from '@mui/material'
 import { useUser } from '@clerk/nextjs'
 import { db } from '../../firebase.js'
-import { collection, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore'
+import { collection, doc, getDoc, writeBatch } from 'firebase/firestore'
 
 export default function Generate() {
     const {isLoaded, isSignedIn, user} = useUser()      // Used to check if the user is logged in
@@ -16,17 +16,6 @@ export default function Generate() {
     const [open, setOpen] = useState(false)             // Used to open and close the dialog modals
     const router = useRouter()                          // Used to navigate to other pages
 
-    const systemPrompt = `You are a flashcard creator, you take in text and create multiple flashcards from it. Make sure to create exactly 10 flashcards. Both front and back should be one sentence long. You should return in the following JSON format: { "flashcards":[ { "front": "Front of the card", "back": "Back of the card" } ] }`
-
-    const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-    const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
-
-    const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        systemInstruction: systemPrompt
-    });
-
     // Submit handler for generating flashcards
     const handleSubmit = async () => {
         if (!user) {
@@ -35,38 +24,17 @@ export default function Generate() {
             return // Checks if user is logged in
         }
 
-        fetch('api/generate', { // Sends POST request to /api/generate route)
+        fetch('/api/generate', { // Sends POST request to /api/generate route)
             method: 'POST',
             body: text,
-        }).then((res) => res.json())
-          .then(data => setFlashcards(data)) // Response is an array of flashcards
-
-        if (!text.trim()) { // Checks if text is empty
-            alert('Please enter some text to generate flashcards.')
-            return
-        }
-
-        try {
-            const response = await fetch('/api/generate', { // Sends POST request to /api/generate route
-                method: 'POST',
-                body: text,
-            })
-
-            if (!response.ok) { // Checks if response is successful
-                throw new Error('Failed to generate flashcards')
-            }
-
-            const data = await response.json()
-            setFlashcards(data) // Sets flashcards to data
-        } catch (error) {
-            console.error('Error generating flashcards:', error)
-            alert('An error occurred while generating flashcards. Please try again.')
-        }
+        })
+            .then((response) => response.json())
+            .then((data) => setFlashcards(data))
     }
 
     // Flips the card
     const handleCardClick = (id) => {
-        setFlipped((prevFlipped) => ({
+        setFlipped((prev) => ({
             ...prev,
             [id]: !prev[id],
         }))
@@ -76,55 +44,45 @@ export default function Generate() {
     const handleClose = () => setOpen(false)
 
     const saveFlashcards = async () => { // Saves the generated flashcards to the user's Firestore document under a new flashcard set with the given name
-        if (!name.trim()) {
+        if (!name) {
           alert('Please enter a name for your flashcard set.')
           return
         }
 
-        try {
-            const batch = writeBatch(db)
-            const userDocRef = doc(collection(db, 'users'), user.id)
-            const userDocSnap = await getDoc(userDocRef)
+        const batch = writeBatch(db)
+        const userDocRef = doc(collection(db, 'users'), user.id)
+        const docSnap = await getDoc(userDocRef)
 
-            if (userDocSnap.exists()) { // If the user document does not exist, it creates one
-                const collections = docSnap.data().flashcardSets || []
+        if (docSnap.exists()) { // If the user document does not exist, it creates one
+            const collections = docSnap.data().flashcards || []
 
-                if (collections.some((set) => set.name === name)) {
-                    alert('A flashcard set with that name already exists.')
-                    return
-                } else {
-                    collections.push({name})
-                    batch.set(userDocRef, {flashcards: collections}, {merge: true})
-                }
-
-                const userData = userDocSnap.data()
-                const updatedSets = [...(userData.flashcardSets || []), {name}] 
-                batch.update(userDocRef, { flashcardSets: updatedSets })
+            if (collections.find((set) => set.name === name)) {
+                alert('A flashcard set with that name already exists.')
+                return
             } else {
-                batch.set(userDocRef, { flashcardSets: [{ name }] })
+                collections.push({name})
+                batch.set(userDocRef, {flashcards: collections}, {merge: true})
             }
-
-            const colRef = collection(userDocRef, name)
-            flashcards.forEach((flashcard) => {
-                const cardDocRef = doc(colRef)
-                batch.set(cardDocRef, flashcard)
-            })
-
-            await batch.commit()
-            alert('Flashcards saved successfully!')   // After saving, it alerts the user and closes the dialog
-
-            handleClose()
-            //name('')
-            router.push('/flashcards')                // Redirects the user to the flashcards page
-        } catch (error) {
-            console.error('Error saving flashcards:', error)
-            alert('An error occurred while saving flashcards. Please try again.')
+        } else {
+            batch.set(userDocRef, { flashcards: [{ name }] })
         }
+
+        const colRef = collection(userDocRef, name)
+        flashcards.forEach((flashcard) => {
+            const cardDocRef = doc(colRef)
+            batch.set(cardDocRef, flashcard)
+        })
+
+        await batch.commit()
+        alert('Flashcards saved successfully!')   // After saving, it alerts the user and closes the dialog
+
+        handleClose()
+        router.push('/flashcards')                // Redirects the user to the flashcards page
     }
 
     return (
         <Container maxWidth="md">
-            <Box sx={{ my: 4 }}>
+            <Box sx={{ mt: 4, mb: 6, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Typography variant="h4" component="h1" gutterBottom>
                     Generate Flashcards
                 </Typography>
@@ -199,10 +157,12 @@ export default function Generate() {
                                                                 {flashcard.front}
                                                             </Typography>
                                                         </div>
+                                                        <div>
+                                                            <Typography variant="h5" component="div">
+                                                                {flashcard.back}
+                                                            </Typography>
+                                                        </div>
                                                     </div>
-
-                                                    <Typography variant="h5" sx={{ mt: 2 }}>Back:</Typography>
-                                                    <Typography>{flashcard.back}</Typography>
                                                 </Box>
                                             </CardContent>
                                         </CardActionArea>
@@ -210,13 +170,11 @@ export default function Generate() {
                                 </Grid>
                             ))}
                         </Grid>
-                        {flashcards.length > 0 && (
-                            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+                            <Box sx={{ mb: 4, p:4, display: 'flex', justifyContent: 'center' }}>
                                 <Button variant="contained" color="primary" onClick={handleOpen}>
                                     Save Flashcards
                                 </Button>
                             </Box>
-                        )}
                     </Box>
                 )}
 
@@ -238,7 +196,9 @@ export default function Generate() {
                         />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={handleClose}>Cancel</Button>
+                        <Button onClick={handleClose}>
+                            Cancel
+                        </Button>
                         <Button onClick={saveFlashcards} color="primary">
                             Save
                         </Button>
