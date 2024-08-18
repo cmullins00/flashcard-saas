@@ -29,7 +29,11 @@ export default function Generate() {
 
     // Submit handler for generating flashcards
     const handleSubmit = async () => {
-        if (!user) return // Checks if user is logged in
+        if (!user) {
+            alert('Please sign in to generate flashcards.')
+            console.log('Error: User is not logged in.')
+            return // Checks if user is logged in
+        }
 
         fetch('api/generate', { // Sends POST request to /api/generate route)
             method: 'POST',
