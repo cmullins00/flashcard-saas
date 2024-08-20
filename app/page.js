@@ -1,11 +1,23 @@
 'use client'
-import Image from "next/image";
 import getStripe from '@/utils/get-stripe'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
-import { AppBar, Toolbar, Button, Typography, Box, Grid, Container } from '@mui/material'
+import { AppBar, Toolbar, Button, Typography, Box, Grid, Container, Component } from '@mui/material'
 import Head from 'next/head'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react';
+
+function redirectToSignIn(){
+  useEffect(() => {
+    window.location.href = '/sign-in'
+  });
+
+  return null;
+}
+
+const publicPages = []
 
 export default function Home() {
+  const router = useRouter();
 
   // Stripe integration
   const handleSubmit = async () => {
@@ -133,6 +145,7 @@ export default function Home() {
           </Grid>
         </Box>
       </AppBar>
+      
     </Container>
   )
 

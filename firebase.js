@@ -1,5 +1,7 @@
 import { initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore'
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { useClerk, useUser } from '@clerk/nextjs'
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -13,6 +15,16 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        console.log('User is logged in.')
+        const userId = user.uid;
+    } else {
+        console.log('User is not logged in.')
+    }
+})
 
 export {db};

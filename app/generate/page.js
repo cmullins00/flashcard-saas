@@ -2,13 +2,18 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Container, TextField, Button, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, CardActionArea, Grid, Card, CardContent } from '@mui/material'
-import { useUser } from '@clerk/nextjs'
+import { Container, TextField, Button, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, CardActionArea, Grid, Card, CardContent, Toolbar, AppBar } from '@mui/material'
+import { useUser, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+
+import { collection, doc, getDoc, writeBatch } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { db } from '../../firebase.js'
-import { collection, doc, getDoc, writeBatch } from 'firebase/firestore'
+import { useClerk } from '@clerk/nextjs';
 
 export default function Generate() {
-    const {isLoaded, isSignedIn, user} = useUser()      // Used to check if the user is logged in
+    const {user} = useUser()      // Used to check if the user is logged in
+    const { client } = useClerk();
     const [flashcards, setFlashcards] = useState([])    // Generated flashcards
     const [flipped, setFlipped] = useState([])          // Keeps track of which flashcards are flipped
     const [name, setName] = useState('')                // Name of the flashcard set
@@ -16,10 +21,32 @@ export default function Generate() {
     const [open, setOpen] = useState(false)             // Used to open and close the dialog modals
     const router = useRouter()                          // Used to navigate to other pages
 
+    // Get Firebase token using Clerk token
+    const signInAndGetToken = async (clerkToken) => {
+        try {
+          const functions = getFunctions();
+          const verifyClerkToken = httpsCallable(functions, 'verifyClerkToken');
+          const result = await verifyClerkToken({ token: clerkToken });
+          const firebaseToken = result.data.token;
+      
+          const auth = getAuth();
+          await signInWithCustomToken(auth, firebaseToken);
+          console.log('Firebase user signed in with custom token.');
+        } catch (error) {
+          console.error('Error during Firebase sign-in:', error);
+        }
+      };
+
+
+    console.log('Clerk User:', user);
+
+
     // Submit handler for generating flashcards
     const handleSubmit = async () => {
+        // Checks if user is logged in
         if (!user) {
-            alert('Please sign in to generate flashcards.')
+            //alert('Please sign in to generate flashcards.')
+            router.push('/sign-in')
             console.log('Error: User is not logged in.')
             return // Checks if user is logged in
         }
@@ -44,11 +71,20 @@ export default function Generate() {
     const handleClose = () => setOpen(false)
 
     const saveFlashcards = async () => { // Saves the generated flashcards to the user's Firestore document under a new flashcard set with the given name
+        if (!user) {
+            alert('Please sign in to save flashcards.')
+            return
+        }
+
         if (!name) {
           alert('Please enter a name for your flashcard set.')
           return
         }
+        
+        const clerkToken = client.token // Fetch Clerk token
+        await signInAndGetToken(clerkToken); // Pass Clerk token to function that generates Firebase token and signs in user
 
+        console.log('User ID:', user.id); // Debugging line
         const batch = writeBatch(db)
         const userDocRef = doc(collection(db, 'users'), user.id)
         const docSnap = await getDoc(userDocRef)
@@ -82,7 +118,22 @@ export default function Generate() {
 
     return (
         <Container maxWidth="md">
+            <AppBar position="static" sx={{ backgroundColor: 'white', color: 'black' }}>
+            <Toolbar sx={{ backgroundColor: '#3f51b5', color: 'white', }}>
+                <Typography variant="h6" style={{ flexGrow: 1 }}>
+                    Flashcard SaaS
+                </Typography>
+                <SignedOut>
+                    <Button color="inherit" href="/sign-in">Login</Button>
+                    <Button color="inherit" href="/sign-up">Sign Up</Button>
+                </SignedOut>
+                <SignedIn>
+                    <UserButton />
+                </SignedIn>
+                </Toolbar>
+            
             <Box sx={{ mt: 4, mb: 6, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {/* Header and Navigation */}
                 <Typography variant="h4" component="h1" gutterBottom>
                     Generate Flashcards
                 </Typography>
@@ -204,6 +255,7 @@ export default function Generate() {
                         </Button>
                     </DialogActions>
                 </Dialog>
+                </AppBar>
         </Container>
     )
 }
